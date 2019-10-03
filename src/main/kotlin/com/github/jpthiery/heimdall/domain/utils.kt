@@ -6,6 +6,7 @@ sealed class Either<out L, out R> {
     data class Right<out R>(val right: R) : Either<Nothing, R>()
 
     companion object {
+
         fun <L> left(value: L): Left<L> = Either.Left(value)
         fun <R> right(value: R): Right<R> = Either.Right(value)
 
