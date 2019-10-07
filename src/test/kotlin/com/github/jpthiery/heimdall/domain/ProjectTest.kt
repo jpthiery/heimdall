@@ -192,7 +192,7 @@ internal class ProjectTest {
     }
 
     @TestFactory
-    fun `Decide on project`() = listOf<DecideFixture<ProjectCommand, ProjectState, ProjectEvent>>(
+    fun `Decide on project`() = listOf(
             //  ProjectNotExist
             decideTestOnProjectWith()
                     .given(ProjectNotExit)
@@ -252,13 +252,12 @@ internal class ProjectTest {
                     .then(commandSucceeded(ProjectBuilt::class))
 
     )
-            .map { it ->
+            .map {
                 DynamicTest.dynamicTest(
                         "When ${it.command::class.simpleName} on project state ${it.initialState::class.simpleName} then expecting ${it.expectedResult}",
                         assertOnDecideFixture(it, Project())
                 )
             }
-
 
     private fun expectedCommandResultContainEventAndIsTypeOf(commandResult: HandleCommandResult, commandResultType: KClass<out HandleCommandResult>, eventType: KClass<out ProjectEvent>?) {
         assertk.assertThat(commandResult).isInstanceOf(commandResultType)
@@ -271,9 +270,79 @@ internal class ProjectTest {
         }
     }
 
+    @TestFactory
+    fun `Apply on project`() = listOf<ApplierFixture<ProjectState, ProjectEvent>>(
+            //  ProjectNotExist
+            applyTestOnProjectWith()
+                    .given(ProjectNotExit)
+                    .whenApplyEvent(ProjectCreated(defaultProjectId, defaultProjectId.id))
+                    .then(emptyProjectDescribing),
+
+            applyTestOnProjectWith()
+                    .given(ProjectNotExit)
+                    .whenApplyEvent(DocumentToProjectAdded(defaultProjectId, defaultDocument))
+                    .then(ProjectNotExit),
+
+            applyTestOnProjectWith()
+                    .given(ProjectNotExit)
+                    .whenApplyEvent(ProjectBuilt(defaultProjectId, defaultBuiltId))
+                    .then(ProjectNotExit),
+
+            //  ProjectDescribing
+            applyTestOnProjectWith()
+                    .given(emptyProjectDescribing)
+                    .whenApplyEvent(ProjectCreated(defaultProjectId, defaultProjectId.id))
+                    .then(emptyProjectDescribing),
+
+            applyTestOnProjectWith()
+                    .given(emptyProjectDescribing)
+                    .whenApplyEvent(DocumentToProjectAdded(defaultProjectId, defaultDocument))
+                    .then(ProjectDescribing(
+                            defaultProjectId,
+                            defaultProjectId.id,
+                            documents = setOf(defaultDocument)
+                    )),
+
+            applyTestOnProjectWith()
+                    .given(emptyProjectDescribing)
+                    .whenApplyEvent(ProjectBuilt(defaultProjectId, defaultBuiltId))
+                    .then(simpleProjectAlive),
+
+            //  ProjectAlive
+
+            applyTestOnProjectWith()
+                    .given(simpleProjectAlive)
+                    .whenApplyEvent(ProjectCreated(defaultProjectId, defaultProjectId.id))
+                    .then(simpleProjectAlive),
+
+            applyTestOnProjectWith()
+                    .given(simpleProjectAlive)
+                    .whenApplyEvent(DocumentToProjectAdded(defaultProjectId, defaultDocument))
+                    .then(ProjectAlive(
+                            defaultProjectId,
+                            defaultProjectId.id,
+                            deliveries = setOf(defaultBuiltId),
+                            documents = setOf(defaultDocument)
+                    )),
+
+            applyTestOnProjectWith()
+                    .given(simpleProjectAlive)
+                    .whenApplyEvent(ProjectBuilt(defaultProjectId, defaultBuiltId))
+                    .then(simpleProjectAlive)
+    )
+            .map {
+                DynamicTest.dynamicTest(
+                        "Given project state ${it.initialState::class}, When applying event ${it.eventToApply}, Then expecting to get state ${it.expectedState::class}",
+                        assertOnApply(it, Project())
+                )
+            }
 }
 
 //  Alias
-fun decideTestOnProjectWith(): StateAppender<ProjectCommand, ProjectState, ProjectEvent> {
+fun decideTestOnProjectWith(): DecideStateAppender<ProjectCommand, ProjectState, ProjectEvent> {
     return decideTestWith()
+}
+
+fun applyTestOnProjectWith(): ApplierStateAppender<ProjectState, ProjectEvent> {
+    return applierTestWith()
 }

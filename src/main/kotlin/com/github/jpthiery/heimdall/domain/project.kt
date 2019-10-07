@@ -84,35 +84,46 @@ class Project : Aggregate<ProjectCommand, ProjectState, ProjectEvent> {
 
     private fun applyOnProjectDescribing(state: ProjectDescribing, event: ProjectEvent): ProjectState = when (event) {
         is DocumentToProjectAdded -> {
-            val newEvents = state.documents.toMutableList()
+            val newEvents = state.documents.toMutableSet()
             newEvents.add(event.document)
             ProjectDescribing(
                     state.id,
                     state.name,
                     state.scmUrl,
-                    newEvents.toList()
+                    newEvents.toSet()
             )
         }
         is ProjectBuilt -> ProjectAlive(
                 state.id,
                 state.name,
                 state.scmUrl,
-                state.documents.toList(),
-                listOf(event.version)
+                state.documents.toSet(),
+                setOf(event.version)
         )
         else -> state
     }
 
     private fun applyOnProjectAlive(state: ProjectAlive, event: ProjectEvent): ProjectState = when (event) {
         is ProjectBuilt -> {
-            val newBuilts = state.deliveries.toMutableList()
+            val newBuilts = state.deliveries.toMutableSet()
             newBuilts.add(event.version)
             ProjectAlive(
                     state.id,
                     state.name,
                     state.scmUrl,
-                    state.documents.toList(),
-                    newBuilts.toList()
+                    state.documents.toSet(),
+                    newBuilts.toSet()
+            )
+        }
+        is DocumentToProjectAdded -> {
+            val newDocuments = state.documents.toMutableSet()
+            newDocuments.add(event.document)
+            ProjectAlive(
+                    state.id,
+                    state.name,
+                    state.scmUrl,
+                    newDocuments.toSet(),
+                    state.deliveries.toSet()
             )
         }
         else -> state

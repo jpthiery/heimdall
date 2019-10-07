@@ -19,6 +19,7 @@ package com.github.jpthiery.heimdall.domain
 val defaultProjectId = ProjectId("Heimdall")
 
 val defaultDocument = EmbeddedDocument("test", "test content")
+val secondDocument = EmbeddedDocument("test", "coucou")
 
 val defaultBuiltId = BuildId(ProjectBuiltVersion("1.0.0-SNAPSHOT"))
 
@@ -30,13 +31,13 @@ val emptyProjectDescribing = ProjectDescribing(
         defaultProjectId,
         defaultProjectId.id,
         "",
-        listOf()
+        setOf()
 )
 
 val simpleProjectAlive = ProjectAlive(
         defaultProjectId,
         defaultProjectId.id,
         "",
-        listOf(),
-        listOf(defaultBuiltId)
+        setOf(),
+        setOf(defaultBuiltId)
 )

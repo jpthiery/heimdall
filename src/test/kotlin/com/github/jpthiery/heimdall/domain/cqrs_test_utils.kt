@@ -1,4 +1,5 @@
 package com.github.jpthiery.heimdall.domain
+
 /*
     Copyright 2019 Jean-Pascal Thiery
 
@@ -16,16 +17,12 @@ package com.github.jpthiery.heimdall.domain
 */
 
 import assertk.assertThat
-import assertk.assertions.hasSameSizeAs
-import assertk.assertions.isEqualTo
-import assertk.assertions.isGreaterThan
-import assertk.assertions.isInstanceOf
+import assertk.assertions.*
 import assertk.fail
 import kotlin.reflect.KClass
 
-
+//  Decide tester
 data class DecideFixture<C : Command, S : State, E : Event>(val command: C, val initialState: S, val expectedResult: DecideResultExpected<E>)
-
 
 sealed class DecideResultExpected<E : Event>
 
@@ -91,29 +88,70 @@ fun <C : Command, S : State, E : Event> assertOnDecideFixture(decideFixture: Dec
     }
 }
 
-//  Builders
-
-interface StateAppender<C : Command, S : State, E : Event> {
-    fun  given(initialState: S): CommandAppender<C, S, E>
+interface DecideStateAppender<C : Command, S : State, E : Event> {
+    fun given(initialState: S): DecideCommandAppender<C, S, E>
 }
 
-interface CommandAppender<C : Command, S : State, E : Event> {
-    fun  whenApplyCommand(command: C): ExpectedAppender<C, S, E>
+interface DecideCommandAppender<C : Command, S : State, E : Event> {
+    fun whenApplyCommand(command: C): DecideExpectedAppender<C, S, E>
 }
 
-interface ExpectedAppender<C : Command, S : State, E : Event> {
+interface DecideExpectedAppender<C : Command, S : State, E : Event> {
     fun then(decideExpected: DecideResultExpected<E>): DecideFixture<C, S, E>
 }
 
 // https://youtrack.jetbrains.com/issue/KT-7770
-fun <C : Command, S : State, E : Event> decideTestWith(): StateAppender<C, S, E> {
-    return object : StateAppender<C, S, E> {
-        override fun given(initialState: S): CommandAppender<C, S, E> {
-            return object : CommandAppender<C, S, E> {
-                override fun whenApplyCommand(command: C): ExpectedAppender<C, S, E> {
-                    return object : ExpectedAppender<C, S, E> {
+fun <C : Command, S : State, E : Event> decideTestWith(): DecideStateAppender<C, S, E> {
+    return object : DecideStateAppender<C, S, E> {
+        override fun given(initialState: S): DecideCommandAppender<C, S, E> {
+            return object : DecideCommandAppender<C, S, E> {
+                override fun whenApplyCommand(command: C): DecideExpectedAppender<C, S, E> {
+                    return object : DecideExpectedAppender<C, S, E> {
                         override fun then(decideExpected: DecideResultExpected<E>): DecideFixture<C, S, E> {
                             return DecideFixture(command, initialState, decideExpected)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+//  Apply tester
+data class ApplierFixture<S : State, E : Event>(val initialState: S, val eventToApply: E, val expectedState: S)
+
+fun <C : Command, S : State, E : Event> assertOnApply(fixture: ApplierFixture<S, E>, aggregate: Aggregate<C, S, E>): () -> Unit {
+    return {
+        val result = aggregate.apply(fixture.initialState, fixture.eventToApply)
+        if (fixture.expectedState::class.isData) {
+            assertk.assertThat(result::class.isData).isTrue()
+            assertk.assertThat(result).isDataClassEqualTo(fixture.expectedState)
+        } else {
+            assertk.assertThat(result).isEqualTo(fixture.expectedState)
+        }
+    }
+}
+
+interface ApplierStateAppender<S : State, E : Event> {
+    fun given(initialState: S): ApplierEventAppender<S, E>
+}
+
+interface ApplierEventAppender<S : State, E : Event> {
+    fun whenApplyEvent(event: E): ApplierExpectedAppender<S, E>
+}
+
+interface ApplierExpectedAppender<S : State, E : Event> {
+    fun then(expectedState: S): ApplierFixture<S, E>
+}
+
+fun <S : State, E : Event> applierTestWith(): ApplierStateAppender<S, E> {
+    return object : ApplierStateAppender<S, E> {
+        override fun given(initialState: S): ApplierEventAppender<S, E> {
+            return object : ApplierEventAppender<S, E> {
+                override fun whenApplyEvent(eventToApply: E): ApplierExpectedAppender<S, E> {
+                    return object : ApplierExpectedAppender<S, E> {
+                        override fun then(expectedState: S): ApplierFixture<S, E> {
+                            return ApplierFixture(initialState, eventToApply, expectedState)
                         }
                     }
                 }

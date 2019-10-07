@@ -65,15 +65,15 @@ data class ProjectDescribing(
         override val id: ProjectId,
         val name: String,
         val scmUrl: String = "",
-        val documents: List<Document> = listOf()
+        val documents: Set<Document> = setOf()
 ) : ProjectState()
 
 data class ProjectAlive(
         override val id: ProjectId,
         val name: String,
         val scmUrl: String = "",
-        val documents: List<Document> = listOf(),
-        val deliveries: List<BuildId>
+        val documents: Set<Document> = setOf(),
+        val deliveries: Set<BuildId>
 ) : ProjectState()
 
 
