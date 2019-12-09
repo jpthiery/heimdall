@@ -56,15 +56,21 @@ interface Aggregate<C : Command, S : State, E : Event> {
         return StateVersioned(currentState, version)
     }
 
+    fun getEventType(): Class<E>
+
 }
 
 interface EventStore {
 
     fun <C : Command, S : State, E : Event> getEventForAggregate(aggregate: Aggregate<C, S, E>, id: StreamId): List<E>
 
-    fun <I : StreamId, E : Event> appendEvents(streamId: I, events: List<E>)
+    fun <I : StreamId, C : Command, S : State, E : Event> appendEvents(aggregate: Aggregate<C, S, E>, id: I, events: List<E>, initialStateVersion: Int): AppendedEventResult
 
 }
+
+sealed class AppendedEventResult
+data class SuccessfulAppendedEventResult(val newStateVersion: Int) : AppendedEventResult()
+data class FailedAppendedEventResult(val reason: String) : AppendedEventResult()
 
 sealed class HandleCommandResult() {
 
@@ -72,7 +78,7 @@ sealed class HandleCommandResult() {
 
 }
 
-data class SuccessfullyHandleCommand<C : Command, E : Event>(override val command: C, val eventEmitted: List<E>) : HandleCommandResult()
+data class SuccessfullyHandleCommand<C : Command, E : Event>(override val command: C, val eventEmitted: List<E>, val newStateVersion: Int) : HandleCommandResult()
 data class FailedToHandleCommand<C : Command>(override val command: C, val reason: String) : HandleCommandResult()
 data class NoopToHandleCommand<C : Command>(override val command: C) : HandleCommandResult()
 
@@ -81,21 +87,23 @@ class CqrsEngine(private val eventStore: EventStore) {
     fun <C : Command, E : Event, S : State> handleCommand(aggregate: Aggregate<C, S, E>, command: C): HandleCommandResult {
 
         val previousEvents = eventStore.getEventForAggregate(aggregate, command.id())
-        var versionedState = aggregate.replay(previousEvents)
+        val initialVersionedState = aggregate.replay(previousEvents)
 
-        return aggregate.decide(command, versionedState.state)
+        return aggregate.decide(command, initialVersionedState.state)
                 .fold(
                         { reason -> FailedToHandleCommand(command, reason) },
                         { emittedEvents ->
                             if (emittedEvents.isEmpty()) {
                                 NoopToHandleCommand(command)
                             } else {
-                                eventStore.appendEvents(command.id(), emittedEvents)
-                                SuccessfullyHandleCommand(command, emittedEvents)
+                                when (val appendedEventResult = eventStore.appendEvents(aggregate, command.id(), emittedEvents, initialVersionedState.version)) {
+                                    is SuccessfulAppendedEventResult -> SuccessfullyHandleCommand(command, emittedEvents, initialVersionedState.version + emittedEvents.size)
+                                    is FailedAppendedEventResult -> FailedToHandleCommand(command, appendedEventResult.reason)
+                                }
                             }
                         }
                 )
-
     }
 
 }
+

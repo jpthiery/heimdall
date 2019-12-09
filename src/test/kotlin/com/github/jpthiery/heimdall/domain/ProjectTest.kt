@@ -77,7 +77,7 @@ internal class ProjectTest {
     @Test
     fun `Attach a document to a project with a description should return a DocumentToProjectAdded event`() {
 
-        eventStore.appendEvents(defaultProjectId, listOf(ProjectCreated(defaultProjectId, defaultProjectId.id)))
+        eventStore.appendEvents(aggregate, defaultProjectId, listOf(ProjectCreated(defaultProjectId, defaultProjectId.id)), 0)
         val command = AddDocumentToProject(defaultProjectId, defaultDocument)
 
         val commandResult = cqrsEngine.handleCommand(aggregate, command)
@@ -90,7 +90,7 @@ internal class ProjectTest {
     @Test
     fun `Create a project to an project describing may be rejected`() {
 
-        eventStore.appendEvents(defaultProjectId, listOf(ProjectCreated(defaultProjectId, defaultProjectId.id)))
+        eventStore.appendEvents(aggregate, defaultProjectId, listOf(ProjectCreated(defaultProjectId, defaultProjectId.id)), 0)
         val command = CreateProject(defaultProjectId, "Heimdall")
 
         val commandResult = cqrsEngine.handleCommand(aggregate, command)
@@ -103,11 +103,13 @@ internal class ProjectTest {
     fun `Create a project to a lived project may be rejected`() {
 
         eventStore.appendEvents(
+                aggregate,
                 defaultProjectId,
                 listOf(
                         ProjectCreated(defaultProjectId, defaultProjectId.id),
                         ProjectBuilt(defaultProjectId, defaultBuiltId)
-                )
+                ),
+                0
         )
 
         val command = CreateProject(defaultProjectId, "Heimdall")
@@ -122,10 +124,12 @@ internal class ProjectTest {
     fun `Attach a build version to a project describing should return a ProjectBuilt event`() {
 
         eventStore.appendEvents(
+                aggregate,
                 defaultProjectId,
                 listOf(
                         ProjectCreated(defaultProjectId, defaultProjectId.id)
-                )
+                ),
+                0
         )
 
         val command = AttachBuiltVersionOfProject(defaultProjectId, defaultBuiltId)
@@ -139,10 +143,12 @@ internal class ProjectTest {
     fun `Attach 2 builds version to a project describing should return a ProjectBuilt event`() {
 
         eventStore.appendEvents(
+                aggregate,
                 defaultProjectId,
                 listOf(
                         ProjectCreated(defaultProjectId, defaultProjectId.id)
-                )
+                ),
+                0
         )
 
         var command = AttachBuiltVersionOfProject(defaultProjectId, defaultBuiltId)
@@ -339,10 +345,6 @@ internal class ProjectTest {
 }
 
 //  Alias
-fun decideTestOnProjectWith(): DecideStateAppender<ProjectCommand, ProjectState, ProjectEvent> {
-    return decideTestWith()
-}
+fun decideTestOnProjectWith(): DecideStateAppender<ProjectCommand, ProjectState, ProjectEvent> = decideTestWith()
 
-fun applyTestOnProjectWith(): ApplierStateAppender<ProjectState, ProjectEvent> {
-    return applierTestWith()
-}
+fun applyTestOnProjectWith(): ApplierStateAppender<ProjectState, ProjectEvent> = applierTestWith()

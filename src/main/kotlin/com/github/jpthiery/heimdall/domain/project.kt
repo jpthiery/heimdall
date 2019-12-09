@@ -33,6 +33,10 @@ class Project : Aggregate<ProjectCommand, ProjectState, ProjectEvent> {
 
     override fun notExistState(): ProjectState = ProjectNotExit
 
+    override fun getEventType(): Class<ProjectEvent> {
+        return ProjectEvent::class.java
+    }
+
     private fun decideOnProjectNotExit(command: ProjectCommand): Either<String, List<ProjectEvent>> = when (command) {
         is CreateProject -> Either.success(listOf(
                 ProjectCreated(command.id, command.name)
@@ -59,7 +63,7 @@ class Project : Aggregate<ProjectCommand, ProjectState, ProjectEvent> {
                         ProjectBuilt(state.id, command.builtId)
                 )
         )
-        else -> Either.fail("Command ${command::class} is not supported for project describing")
+        else -> Either.fail("Command ${command::class.simpleName} is not supported for project describing")
     }
 
     private fun decideOnProjectAlive(state: ProjectAlive, command: ProjectCommand): Either<String, List<ProjectEvent>> = when (command) {

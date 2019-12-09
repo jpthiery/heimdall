@@ -19,7 +19,6 @@ package com.github.jpthiery.heimdall.domain
 val defaultProjectId = ProjectId("Heimdall")
 
 val defaultDocument = EmbeddedDocument("test", "test content")
-val secondDocument = EmbeddedDocument("test", "coucou")
 
 val defaultBuiltId = BuildId(ProjectBuiltVersion("1.0.0-SNAPSHOT"))
 
@@ -41,3 +40,5 @@ val simpleProjectAlive = ProjectAlive(
         setOf(),
         setOf(defaultBuiltId)
 )
+
+const val projectCreatedJson = "{\"id\":{\"id\":\"Heimdall\"},\"name\":\"Heimdall\",\"happenedDate\":1572819787396,\"eventType\":\"ProjectCreated\"}"

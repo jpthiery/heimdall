@@ -1,4 +1,4 @@
-package com.github.jpthiery.heimdall.domain
+package com.github.jpthiery.heimdall.infra
 
 /*
     Copyright 2019 Jean-Pascal Thiery
@@ -16,7 +16,13 @@ package com.github.jpthiery.heimdall.domain
    limitations under the License.
 */
 
-class EventStoreForTest() : EventStore {
+import com.github.jpthiery.heimdall.domain.*
+import javax.annotation.Priority
+import javax.enterprise.inject.Alternative
+
+@Alternative
+@Priority(1)
+class InMemoryEventStore : EventStore {
 
     private val cache: MutableMap<CacheEntry, List<Event>> = mutableMapOf()
 
@@ -44,6 +50,5 @@ class EventStoreForTest() : EventStore {
             fun from(id: StreamId): CacheEntry = CacheEntry(id.javaClass, id)
         }
     }
-
 
 }

@@ -1,5 +1,6 @@
 package com.github.jpthiery.heimdall.domain
 
+import com.github.jpthiery.heimdall.infra.RedisEventStore
 import java.time.Clock
 
 /*
@@ -39,17 +40,16 @@ data class CreateProject(override val id: ProjectId, val name: String) : Project
 data class AddDocumentToProject(override val id: ProjectId, val document: Document) : ProjectCommand()
 data class AttachBuiltVersionOfProject(override val id: ProjectId, val builtId: BuildId) : ProjectCommand()
 
-
-sealed class ProjectEvent(private val clock: Clock = Clock.systemUTC()) : Event {
+sealed class ProjectEvent(clock: Clock = Clock.systemUTC()) : Event {
     abstract val id: ProjectId
+    val happenedDate: Long = clock.millis()
     override fun id(): ProjectId = id
-    override fun happenedDate(): Long = clock.millis()
+    override fun happenedDate(): Long = happenedDate
 }
 
 data class ProjectCreated(override val id: ProjectId, val name: String) : ProjectEvent()
 data class DocumentToProjectAdded(override val id: ProjectId, val document: Document) : ProjectEvent()
 data class ProjectBuilt(override val id: ProjectId, val version: BuildId) : ProjectEvent()
-data class DocumentToProjectBuiltAdded(override val id: ProjectId, val version: ProjectBuiltVersion, val document: Document) : ProjectEvent()
 
 sealed class ProjectState : State {
     abstract val id: ProjectId
@@ -79,4 +79,5 @@ data class ProjectAlive(
 
 //  Built of Project
 data class BuildId(val id: ProjectBuiltVersion) : StreamId
+
 
