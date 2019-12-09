@@ -24,6 +24,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Content
 import org.eclipse.microprofile.openapi.annotations.media.Schema
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses
+import org.eclipse.microprofile.openapi.annotations.tags.Tag
 import org.jboss.logging.Logger
 import javax.inject.Inject
 import javax.ws.rs.*
@@ -42,6 +43,7 @@ class ProjectEndpoint(
 
     @POST
     @Consumes(MediaType.MEDIA_TYPE_WILDCARD)
+    @Tag(name = "Project")
     fun createProject(name: String, @Context uriInfo: UriInfo): Response {
         log.debug("Create project with name '$name'")
         if (isBlank(name)) {
