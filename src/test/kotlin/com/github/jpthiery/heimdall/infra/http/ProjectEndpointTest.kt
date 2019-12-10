@@ -1,6 +1,9 @@
 package com.github.jpthiery.heimdall.infra.http
 
-import com.github.jpthiery.heimdall.domain.*
+import com.github.jpthiery.heimdall.domain.CqrsEngine
+import com.github.jpthiery.heimdall.domain.CreateProject
+import com.github.jpthiery.heimdall.domain.Project
+import com.github.jpthiery.heimdall.domain.ProjectId
 import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
 import org.hamcrest.CoreMatchers.`is`
@@ -19,17 +22,19 @@ internal class ProjectEndpointTest {
     @Test
     fun `Create a new project should return her id`() {
         val projectName = "TheOne"
-        val expectedId = createProjectIdFromName(projectName).id
+        val expectedId = ProjectId.createProjectIdFromName(projectName).id
 
         given()
-                .body(projectName)
+                .body("{\"name\": \"$projectName\" }")
 
                 .`when`()
+                .contentType("application/json")
                 .post("/api/v1/project")
 
                 .then()
                 .statusCode(201)
-                .body(`is`(expectedId))
+                .body("id", `is`(expectedId))
+                .body("name", `is`(projectName))
                 .header("Location", containsString("/api/v1/project/$expectedId"))
     }
 
@@ -40,8 +45,10 @@ internal class ProjectEndpointTest {
         val expectedId = createProject(projectName)
 
         given()
-                .body(projectName)
+                .body("{\"name\": \"$projectName\" }")
 
+                .`when`()
+                .contentType("application/json")
                 .`when`()
                 .post("/api/v1/project")
 
@@ -68,7 +75,7 @@ internal class ProjectEndpointTest {
     }
 
     private fun createProject(name: String): ProjectId {
-        val projectId = createProjectIdFromName(name)
+        val projectId = ProjectId.createProjectIdFromName(name)
         val command = CreateProject(projectId, name)
         cqrsEngine.handleCommand(Project(), command)
         return projectId

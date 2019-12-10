@@ -16,7 +16,7 @@ package com.github.jpthiery.heimdall.domain
    limitations under the License.
 */
 
-val defaultProjectId = ProjectId("Heimdall")
+val defaultProjectId = ProjectId.createProjectIdFromName("Heimdall")
 
 val defaultDocument = EmbeddedDocument("test", "test content")
 
@@ -41,4 +41,5 @@ val simpleProjectAlive = ProjectAlive(
         setOf(defaultBuiltId)
 )
 
-const val projectCreatedJson = "{\"id\":{\"id\":\"Heimdall\"},\"name\":\"Heimdall\",\"happenedDate\":1572819787396,\"eventType\":\"ProjectCreated\"}"
+val heimdallProjectId = ProjectId.createProjectIdFromName("Heimdall")
+val projectCreatedJson = "{\"id\":{\"id\":\"${heimdallProjectId.id}\"},\"name\":\"Heimdall\",\"happenedDate\":1572819787396,\"eventType\":\"ProjectCreated\"}"

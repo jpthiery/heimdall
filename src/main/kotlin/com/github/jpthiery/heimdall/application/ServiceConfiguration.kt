@@ -19,7 +19,6 @@ package com.github.jpthiery.heimdall.application
 import com.github.jpthiery.heimdall.domain.CqrsEngine
 import com.github.jpthiery.heimdall.domain.EventStore
 import com.github.jpthiery.heimdall.infra.InMemoryEventStore
-import io.quarkus.arc.DefaultBean
 import javax.enterprise.context.Dependent
 import javax.enterprise.inject.Produces
 import javax.inject.Singleton
@@ -31,12 +30,10 @@ class ServiceConfiguration {
     @Singleton
     fun eventStore(): EventStore = InMemoryEventStore()
 
-    @DefaultBean
     @Produces
     @Singleton
     fun cqrsEngine(eventStore: EventStore): CqrsEngine = CqrsEngine(eventStore)
 
-    @DefaultBean
     @Produces
     @Singleton
     fun projectFetcher(eventStore: EventStore): ProjectFetcher = DefaultProjectFetcher(eventStore)
