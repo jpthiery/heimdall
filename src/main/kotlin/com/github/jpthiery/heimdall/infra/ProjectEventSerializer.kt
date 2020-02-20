@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.github.jpthiery.heimdall.domain.Event
 import com.github.jpthiery.heimdall.domain.ProjectEvent
+import com.github.jpthiery.heimdall.infra.eventstore.RedisEventStore
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
 
@@ -84,7 +85,7 @@ class ProjectEventSerializer : RedisEventStore.RedisEventStoreMapper<ProjectEven
                         it.key != "eventType"
                     }
                     .forEach {
-                        rewriteJsonNode.set(it.key, it.value)
+                        rewriteJsonNode.set(it.key , it.value ) as JsonNode
                     }
             return mapper.readValue(rewriteJsonNode.toString(), eventClass) as ProjectEvent
         }

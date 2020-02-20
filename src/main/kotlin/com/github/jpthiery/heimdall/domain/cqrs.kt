@@ -68,6 +68,22 @@ interface EventStore {
 
 }
 
+interface EventListener<E: Event> {
+
+    fun receive(event: E)
+
+}
+
+interface EventEmitter {
+
+    fun <E: Event> emit(event: E)
+
+    fun <E: Event> emit(events: List<E>) {
+        events.forEach { event -> emit(event) }
+    }
+
+}
+
 sealed class AppendedEventResult
 data class SuccessfulAppendedEventResult(val newStateVersion: Int) : AppendedEventResult()
 data class FailedAppendedEventResult(val reason: String) : AppendedEventResult()

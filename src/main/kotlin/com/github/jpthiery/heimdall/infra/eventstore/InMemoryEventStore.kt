@@ -1,4 +1,4 @@
-package com.github.jpthiery.heimdall.infra
+package com.github.jpthiery.heimdall.infra.eventstore
 
 /*
     Copyright 2019 Jean-Pascal Thiery

@@ -70,8 +70,22 @@ internal class ProjectEndpointTest {
                 .get("/api/v1/project/{projectId}")
                 .then()
                 .statusCode(200)
-                .body("id.id", `is`(projectId.id))
+                .body("id", `is`(projectId.id))
                 .body("name", `is`(projectName))
+    }
+
+    @Test
+    fun `Add a document to not existing project may return a bad request`() {
+        val projectName = "TopGun"
+
+        given()
+                .pathParam("projectId", ProjectId.createProjectIdFromName(projectName).id)
+                .`when`()
+                .contentType("application/json")
+                .with().body("{\"name\": \"topSecretDocument\", \"content\": \"Coucou\"}")
+                .post("/api/v1/project/{projectId}/document")
+                .then()
+                .statusCode(404)
     }
 
     private fun createProject(name: String): ProjectId {

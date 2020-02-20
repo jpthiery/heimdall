@@ -19,10 +19,13 @@ package com.github.jpthiery.heimdall.infra.http
 import com.github.jpthiery.heimdall.application.ProjectFetcher
 import com.github.jpthiery.heimdall.domain.*
 import org.apache.commons.lang3.StringUtils.isBlank
+import org.apache.commons.lang3.StringUtils.isNoneBlank
 import org.eclipse.microprofile.openapi.annotations.Operation
 import org.eclipse.microprofile.openapi.annotations.enums.ParameterIn
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType
 import org.eclipse.microprofile.openapi.annotations.headers.Header
+import org.eclipse.microprofile.openapi.annotations.links.Link
+import org.eclipse.microprofile.openapi.annotations.links.LinkParameter
 import org.eclipse.microprofile.openapi.annotations.media.Content
 import org.eclipse.microprofile.openapi.annotations.media.Schema
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter
@@ -30,6 +33,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
 import org.jboss.logging.Logger
+import java.util.*
 import javax.inject.Inject
 import javax.ws.rs.*
 import javax.ws.rs.core.*
@@ -47,7 +51,9 @@ class ProjectEndpoint(
 
     @POST
     @Operation(
-            description = "Create a new project"
+            summary = "Create a new project",
+            description = "",
+            operationId = "createProject"
     )
     @APIResponses(
             APIResponse(
@@ -58,6 +64,18 @@ class ProjectEndpoint(
                                 name = "Location",
                                 description = "Content url to access to the newly created project",
                                 required = true
+                        )
+                    ],
+                    links = [
+                        Link(
+                                name = "getProjectLink",
+                                operationId = "getProject",
+                                parameters = [
+                                    LinkParameter(
+                                            name = "projectId",
+                                            expression = "\$response.body#/id"
+                                    )
+                                ]
                         )
                     ]
             ),
@@ -111,7 +129,9 @@ class ProjectEndpoint(
     @GET
     @Path("/{projectId}")
     @Operation(
-            summary = "Allow to access to a given project state by her ProjectId"
+            summary = "Allow to access to a given project state by her ProjectId",
+            description = "",
+            operationId = "getProject"
     )
     @APIResponses(
             APIResponse(
@@ -119,10 +139,7 @@ class ProjectEndpoint(
                     responseCode = "200",
                     content = [
                         Content(
-                                schema = Schema(oneOf = [
-                                    ProjectDescribing::class,
-                                    ProjectAlive::class
-                                ])
+                                schema = Schema(implementation = GetProjectResponseDto::class)
                         )
                     ]
             ),
@@ -148,19 +165,108 @@ class ProjectEndpoint(
                     )
             )
             projectIdParam: String
+    ): Response = checkProjectIdIsValidForm(projectIdParam)
+            .orElseGet {
+                val projectId = ProjectId(projectIdParam)
+                when (val projectState = projectFetcher.fetchById(projectId)) {
+                    is ProjectNotExit -> Response.status(404).build()
+                    else -> Response.ok(GetProjectResponseDto.fromProjectState(projectState)).build()
+                }
+            }
+
+
+    @POST
+    @Path("/{projectId}/document")
+    @Operation(
+            summary = "Allow to add a document to a given project",
+            description = "",
+            operationId = "addDocumentToProject"
+    )
+    @APIResponses(
+            APIResponse(
+                    description = "Successfully added document to the given project",
+                    responseCode = "202"
+            ),
+            APIResponse(
+                    description = "Project Id or Document are not valid",
+                    responseCode = "400"
+            ),
+            APIResponse(
+                    description = "Project not found",
+                    responseCode = "404"
+            )
+    )
+    @Tag(name = "Project")
+    fun addDocument(
+            @PathParam("projectId")
+            @Parameter(
+                    `in` = ParameterIn.PATH,
+                    name = "projectId",
+                    required = true,
+                    schema = Schema(
+                            type = SchemaType.STRING,
+                            pattern = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+                    )
+            )
+            projectIdParam: String,
+            @Parameter(
+                    required = true,
+                    schema = Schema(
+                            type = SchemaType.OBJECT,
+                            implementation = DocumentRequestDto::class
+                    )
+            )
+            documentRequestDto: DocumentRequestDto
     ): Response {
-        if (isBlank(projectIdParam)) {
-            return Response.status(400).entity("projectId must be defined").build()
+        val checkedProjectId = checkProjectIdIsValidForm(projectIdParam)
+        val checkedDocumentDto = if (isBlank(documentRequestDto.name) ||
+                (isBlank(documentRequestDto.content) && isBlank(documentRequestDto.url))) {
+            Optional.of(Response.status(Response.Status.BAD_REQUEST).build())
+        } else {
+            Optional.empty()
         }
-        val projectId = ProjectId(projectIdParam)
-        return when (val projectState = projectFetcher.fetchById(projectId)) {
-            is ProjectNotExit -> Response.status(404).build()
-            else -> Response.ok(projectState).build()
+
+        //  Kotlin not support Optional.or :/
+        return when {
+            checkedProjectId.isPresent -> checkedProjectId.get()
+            checkedDocumentDto.isPresent -> checkedDocumentDto.get()
+            else -> {
+                val document = when {
+                    isNoneBlank(documentRequestDto.content) -> EmbeddedDocument(
+                            documentRequestDto.name,
+                            documentRequestDto.content
+                    )
+                    else -> ExternalLinkDocument(
+                            documentRequestDto.name,
+                            documentRequestDto.url
+                    )
+                }
+                val projectId = ProjectId(projectIdParam)
+                when (projectFetcher.fetchById(projectId)) {
+                    is ProjectNotExit -> Response.status(Response.Status.NOT_FOUND).build()
+                    else -> {
+                        val command = AddDocumentToProject(
+                                projectId,
+                                document
+                        )
+                        when (val resultCommand = cqrsEngine.handleCommand(Project(), command)) {
+                            is SuccessfullyHandleCommand<*, *> -> Response.accepted().build()
+                            is FailedToHandleCommand<*> -> Response.status(Response.Status.BAD_REQUEST).entity(resultCommand.reason).build()
+                            is NoopToHandleCommand<*> -> Response.status(Response.Status.NOT_MODIFIED).build()
+                        }
+                    }
+                }
+            }
         }
+
     }
-
-
 }
+
+fun checkProjectIdIsValidForm(projectIdParam: String): Optional<Response> =
+        if (isBlank(projectIdParam) || !ProjectId.isValidProjectId(projectIdParam)) {
+            Optional.of(Response.status(Response.Status.BAD_REQUEST).entity("projectId is not in expected format.").build())
+        } else Optional.empty()
+
 
 class CreateProjectRequestDto() {
     lateinit var name: String
@@ -171,4 +277,20 @@ data class CreateProjectResponseDto(val name: String, val id: String) {
         fun fromProjectDescribing(projectState: ProjectDescribing): CreateProjectResponseDto =
                 CreateProjectResponseDto(projectState.name, projectState.id.id)
     }
+}
+
+data class GetProjectResponseDto(val name: String, val id: String) {
+    companion object {
+        fun fromProjectState(projectState: ProjectState): GetProjectResponseDto = when (projectState) {
+            is ProjectDescribing -> GetProjectResponseDto(projectState.name, projectState.id.id)
+            is ProjectAlive -> GetProjectResponseDto(projectState.name, projectState.id.id)
+            else -> GetProjectResponseDto("", projectState.id.id)
+        }
+    }
+}
+
+class DocumentRequestDto() {
+    lateinit var name: String
+    lateinit var content: String
+    lateinit var url: String
 }

@@ -1,6 +1,5 @@
 package com.github.jpthiery.heimdall.domain
 
-import com.github.jpthiery.heimdall.infra.RedisEventStore
 import org.apache.commons.lang3.StringUtils
 import java.security.MessageDigest
 import java.time.Clock
@@ -32,19 +31,26 @@ data class InternalLinkDocument(override val name: String, val url: String) : Do
 
 data class ProjectBuiltVersion(val version: String)
 
+
 data class ProjectId(val id: String) : StreamId {
+
     init {
-        require(StringUtils.isNotBlank(id)) {"Project id could not be blank"}
-        val idRegexp = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}".toRegex()
-        require(idRegexp.matches(id)) { "Project id '$id' not match pattern ${idRegexp.pattern}" }
+        require(StringUtils.isNotBlank(id)) { "Project id could not be blank" }
+        require(isValidProjectId(id)) { "Project id '$id' not match pattern ${projectIdRegexp.pattern}" }
     }
 
     companion object {
+
+        val projectIdRegexp = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}".toRegex()
+
         fun createProjectIdFromName(name: String): ProjectId {
             val idASByte = MessageDigest.getInstance("SHA-256").digest(name.toByteArray())
             val id = UUID.nameUUIDFromBytes(idASByte)
             return ProjectId(id.toString())
         }
+
+        fun isValidProjectId(id: String): Boolean = projectIdRegexp.matches(id)
+
     }
 }
 

@@ -1,4 +1,4 @@
-package com.github.jpthiery.heimdall.application
+package com.github.jpthiery.heimdall.application.configuration
 
 /*
     Copyright 2019 Jean-Pascal Thiery
@@ -16,9 +16,11 @@ package com.github.jpthiery.heimdall.application
    limitations under the License.
 */
 
+import com.github.jpthiery.heimdall.application.DefaultProjectFetcher
+import com.github.jpthiery.heimdall.application.ProjectFetcher
 import com.github.jpthiery.heimdall.domain.CqrsEngine
 import com.github.jpthiery.heimdall.domain.EventStore
-import com.github.jpthiery.heimdall.infra.InMemoryEventStore
+import com.github.jpthiery.heimdall.infra.eventstore.InMemoryEventStore
 import javax.enterprise.context.Dependent
 import javax.enterprise.inject.Produces
 import javax.inject.Singleton

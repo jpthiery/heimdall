@@ -20,7 +20,8 @@ import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isInstanceOf
 import com.github.jpthiery.heimdall.domain.*
-import com.github.jpthiery.heimdall.infra.RedisEventStore.RedisEventStoreKeyForger
+import com.github.jpthiery.heimdall.infra.eventstore.RedisEventStore
+import com.github.jpthiery.heimdall.infra.eventstore.RedisEventStore.RedisEventStoreKeyForger
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.whenever

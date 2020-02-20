@@ -338,7 +338,7 @@ internal class ProjectTest {
     )
             .map {
                 DynamicTest.dynamicTest(
-                        "Given project state ${it.initialState::class}, When applying event ${it.eventToApply}, Then expecting to get state ${it.expectedState::class}",
+                        "Given project state ${it.initialState::class.java.simpleName}, When applying event ${it.eventToApply}, Then expecting to get state ${it.expectedState::class}",
                         assertOnApply(it, Project())
                 )
             }
